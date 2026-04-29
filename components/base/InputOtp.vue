@@ -14,9 +14,31 @@ const otpNumber = ref<(number | undefined)[]>([]);
 
 const inputRefs = useTemplateRef<HTMLInputElement[]>('input-refs')
 
-const onNumberInput = ()=>{
-//  do someting
+const onNumberInput = (e:KeyboardEvent, idx:number) => {
+  e.preventDefault();
+  
+  if (/^\d$/.test(e.key)) {                                 
+    otpNumber.value[idx] = +e.key;                            
+    onInputJumpNext(idx);                                     
+  } else if (e.key === 'Backspace') {
+    if(otpNumber.value[idx]) {
+      otpNumber.value[idx] = undefined
+    }  else {
+      otpNumber.value[idx-1] = undefined;                                                  
+      onInputJumpBefore(idx);
+    }                               
+  } else if (e.key === 'Tab') {                               
+    onInputJumpNext(idx);                                     
+  }
 };
+
+const onInputJumpBefore = (idx:number) => {
+  inputRefs.value?.[idx-1]?.focus();
+}
+
+const onInputJumpNext = (idx:number) => {
+  inputRefs.value?.[idx+1]?.focus();
+}
 </script>
 <template>
   <div
@@ -33,7 +55,7 @@ const onNumberInput = ()=>{
             class="w-full h-full border-2 rounded-md text-center bg-white"
             name="otpNumber"
             type="text"
-            @input="onNumberInput"
+            @keydown="onNumberInput($event, idx)"
           >
         </div>
       </div>
