@@ -1,12 +1,22 @@
 <script setup lang="ts">
 interface Props {
   length: number,
+  error: boolean,
+  errorMessage: string,
+  disabled: boolean,
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  length: () => 6
+  length: () => 6,
+  error: false,
+  errorMessage: '',
+  disabled: false,
 })
-const {length} = toRefs(props);
+const {disabled, length} = toRefs(props);
+
+const emit = defineEmits<{                                    
+    complete: [otp: string]                                     
+  }>();
 
 const safeLength = computed(() => Math.min(Math.max(length.value, 4), 8)) ;
 
@@ -51,6 +61,18 @@ const onPaste = (e:ClipboardEvent) => {
   otpNumber.value = [...digits].map(item => +item);
 }
 
+const disabledBtn = computed(()=>{
+   return otpNumber.value.length !== safeLength.value ||
+    otpNumber.value.some(item => item === undefined) ||
+    disabled.value
+})
+
+const onComplete = () => {
+  if(disabledBtn.value) return;
+
+  emit('complete', otpNumber.value.join(''))
+}
+
 </script>
 <template>
   <div
@@ -62,6 +84,7 @@ const onPaste = (e:ClipboardEvent) => {
           class="flex-1 aspect-square"
         >
           <input
+            :disabled="disabled"
             :value="otpNumber[idx]"
             ref="input-refs"
             class="w-full h-full border-2 rounded-md text-center bg-white"
@@ -72,8 +95,18 @@ const onPaste = (e:ClipboardEvent) => {
           >
         </div>
       </div>
-      <span class="text-red-500 text-sm">Invalid code</span>
-      <button class="w-full border-2 rounded-md bg-white py-2 ">Submit</button>
+      <span 
+        v-if="error"
+        class="text-red-500 text-sm"
+        v-text="errorMessage" />
+      <button
+        :disabled="disabledBtn"
+        :class="{'cursor-not-allowed': disabledBtn}"
+        class="w-full border-2 rounded-md bg-white py-2"
+        @click="onComplete"
+       >
+       Submit
+      </button>
     </div>
   </div>
 </template>
