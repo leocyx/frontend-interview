@@ -3,6 +3,8 @@ const disabled = ref<boolean>(false);
 const errorMessage = ref<string>('');
 const isErrorShow = ref<boolean>(false);
 
+const otpNumber = ref<(number | undefined)[]>([]);
+
 interface FetchResult {
   success: boolean,
   data: {
@@ -36,6 +38,7 @@ const onComplete = async (otp:string) => {
 
 <template>
   <BaseInputOtp
+    v-model="otpNumber"
     :disabled="disabled"
     :error="isErrorShow"
     :errorMessage

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 interface Props {
+  modelValue: (number | undefined)[],
   length: number,
   error: boolean,
   errorMessage: string,
@@ -7,20 +8,23 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
   length: () => 6,
   error: false,
   errorMessage: '',
   disabled: false,
 })
-const {disabled, length} = toRefs(props);
+const {disabled, length, modelValue} = toRefs(props);
 
-const emit = defineEmits<{                                    
-    complete: [otp: string]                                     
+const emit = defineEmits<{
+    'update:modelValue': [val: (number | undefined)[]]
+    complete: [otp: string]
   }>();
 
 const safeLength = computed(() => Math.min(Math.max(length.value, 4), 8)) ;
 
-const otpNumber = ref<(number | undefined)[]>([]);
+const n = ref(3);
+const perRow = computed(() => n.value > 0 ? n.value : safeLength.value);
 
 const inputRefs = useTemplateRef<HTMLInputElement[]>('input-refs')
 
@@ -28,15 +32,21 @@ const onNumberInput = (e:KeyboardEvent, idx:number) => {
   if (e.ctrlKey || e.metaKey) return
 
   e.preventDefault();
+  const newArr = [...modelValue.value];
 
   if (/^\d$/.test(e.key)) {                                 
-    otpNumber.value[idx] = +e.key;                            
+    newArr[idx] = +e.key;
+
+    emit('update:modelValue', newArr);
+                         
     onInputJumpNext(idx);                                     
   } else if (e.key === 'Backspace') {
-    if(otpNumber.value[idx]) {
-      otpNumber.value[idx] = undefined
+    if(modelValue.value[idx]) {
+      newArr[idx] = undefined
+      emit('update:modelValue', newArr);
     }  else {
-      otpNumber.value[idx-1] = undefined;                                                  
+      newArr[idx] = undefined;   
+      emit('update:modelValue', newArr);                                       
       onInputJumpBefore(idx);
     }                               
   } else if (e.key === 'Tab') {                               
@@ -58,19 +68,19 @@ const onPaste = (e:ClipboardEvent) => {
   const value =  e.clipboardData?.getData('text') ?? ''; 
   const digits = value.replace(/\D/g, '').slice(0, safeLength.value)  
 
-  otpNumber.value = [...digits].map(item => +item);
+  modelValue.value = [...digits].map(item => +item);
 }
 
 const disabledBtn = computed(()=>{
-   return otpNumber.value.length !== safeLength.value ||
-    otpNumber.value.some(item => item === undefined) ||
+   return modelValue.value.length !== safeLength.value ||
+    modelValue.value.some(item => item === undefined) ||
     disabled.value
 })
 
 const onComplete = () => {
   if(disabledBtn.value) return;
 
-  emit('complete', otpNumber.value.join(''))
+  emit('complete', modelValue.value.join(''));
 }
 
 </script>
@@ -78,20 +88,20 @@ const onComplete = () => {
   <div
     class="min-h-screen bg-gray-100 flex items-center justify-center px-4">
     <div class="flex flex-col items-center gap-4 w-full max-w-xs">
-      <div class="flex gap-2 w-full">
+      <div class="grid gap-2 w-full" :style="{ gridTemplateColumns: `repeat(${perRow}, 1fr)` }">
         <div
           v-for="(item, idx) in safeLength"
-          class="flex-1 aspect-square"
+          class="aspect-square"
         >
           <input
+            :value="modelValue[idx]"
             :disabled="disabled"
-            :value="otpNumber[idx]"
             ref="input-refs"
             class="w-full h-full border-2 rounded-md text-center bg-white"
             name="otpNumber"
             type="text"
             @keydown="onNumberInput($event, idx)"
-            @paste="onPaste"                                              
+            @paste="onPaste"   
           >
         </div>
       </div>
